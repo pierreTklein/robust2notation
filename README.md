@@ -2,6 +2,14 @@
 
 Comp 551 Kaggle project.
 
+## Setting up
+
+1. Make sure you have Python 3 installed, as well as pip3.
+2. Run `setup.sh` to make sure you have the correct modules installed.
+3. Create a directory called `data/` in the root of this project.
+4. Place all of the data files (download link: <https://www.kaggle.com/c/11461/download-all>)
+5. In the command-line navigate to this directory, and run `jupyter notebook .`
+
 ## How to contribute
 
 1. (Optional) make issue for task that you're creating
