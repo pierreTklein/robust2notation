@@ -134,7 +134,10 @@ def getRotations(x, y, rescaleDimension = 40, order = 1, interval_deg=30):
 		deg += interval_deg
 	return newX, newY
 
-def getRotData(X, Y, rescaleDimension = 40, interval_deg=30, parallel=True):
+def getScalings(x, y, dataDim=40, dims=[10,20,30], order=1):
+	pass
+
+def getExtendedData(X, Y, rescaleDimension = 40, interval_deg=30, parallel=True):
 	newX = []
 	newY = []
 	if parallel:
@@ -166,6 +169,31 @@ if __name__ == '__main__':
 	training_imgs = load(PREPROCESSED_TRAINING)
 	labels = pd.read_csv(TRAIN_LAB_PATH)
 	X,y = formatData(training_imgs, labels)
-	X,y = getRotData(X[0:10], y[0:10])
-	save("rotatedTrainData.npy", X)
-	np.savetxt("rotatedTrainLabels.csv", y)
+	X,y = getExtendedData(X[0:4], y[0:4])
+	from matplotlib import pyplot as plt
+
+	IDX = 16
+
+	plt.imshow(X[IDX])
+	plt.title(getCategoryOf(np.where(y[IDX] == 1)[0][0]))
+	plt.show()
+
+	bep = rescale(X[IDX], 30)
+	bep = np.pad(bep, (5,5), mode='constant')
+	plt.imshow(bep)
+	plt.title(getCategoryOf(np.where(y[IDX] == 1)[0][0]))
+	plt.show()
+
+	bep = rescale(X[IDX], 20)
+	bep = np.pad(bep, (10,10), mode='constant')
+	plt.imshow(bep)
+	plt.title(getCategoryOf(np.where(y[IDX] == 1)[0][0]))
+	plt.show()
+
+	bep = rescale(X[IDX], 10)
+	bep = np.pad(bep, (15,15), mode='constant')
+	plt.imshow(bep)
+	plt.title(getCategoryOf(np.where(y[IDX] == 1)[0][0]))
+	plt.show()
+	# save("rotatedTrainData.npy", X)
+	# np.savetxt("rotatedTrainLabels.csv", y)
