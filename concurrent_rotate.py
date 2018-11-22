@@ -8,9 +8,8 @@ from scipy.ndimage import zoom, rotate
 
 TRAIN_LAB_PATH = "./data/train_labels.csv"
 PREPROCESSED_TRAINING = "./data/processedData.npy"
-PREPROCESSED_KAGGLE = "./data/processed_kaggle.npy"
-ROTATED_LAB = "./rotatedTrainLabels.csv"
-ROTATED_TRAINING = "./rotatedTrainData.npy"
+# ROTATED_LAB = "./rotatedTrainLabels.csv"
+# ROTATED_TRAINING = "./rotatedTrainData.npy"
 
 CATEGORIES = ['apple', 'empty', 'moustache', 'mouth', 'mug', 'nail', 'nose', 'octagon', 'paintbrush', 'panda', 'parrot', 'peanut', 'pear', 'pencil', 'penguin', 'pillow', 'pineapple', 'pool', 'rabbit', 'rhinoceros', 'rifle', 'rollerskates', 'sailboat', 'scorpion', 'screwdriver', 'shovel', 'sink', 'skateboard', 'skull', 'spoon', 'squiggle']
 
@@ -64,8 +63,6 @@ def boundingBox(img):
 	return (minX, minY), (maxX, maxY)
 
 # Centers the image
-
-
 def center(img):
 	minCoord, maxCoord = boundingBox(img)
 	xLength = maxCoord[0] - minCoord[0]
@@ -80,8 +77,6 @@ def center(img):
 	return newImg
 
 # Crop out all of the white space. If you want square dimensions, then it will pad white space.
-
-
 def cropWhite(img, isSquare=False, whiteBoundary=True):
 	minCoord, maxCoord = boundingBox(img)
 	xLength = maxCoord[0] - minCoord[0] + 3
@@ -101,8 +96,6 @@ def cropWhite(img, isSquare=False, whiteBoundary=True):
 	return newImg
 
 # rescale image to square of height, width = dimension
-
-
 def rescale(img, dimension, order=0):
 	cropped = cropWhite(img)
 	height = len(cropped)
@@ -110,7 +103,6 @@ def rescale(img, dimension, order=0):
 	zoomFactor = dimension / max(height, width)
 	# print(zoomFactor)
 	return zoom(img, zoomFactor, order=order)
-
 
 def sharpen(img, cutoff=110, bound='below'):
 	newImg = []
@@ -174,7 +166,6 @@ def getScalings(x, y, rescaleDimension=40, dims=(34,30,24,18), order=0):
 
 	return newX, newY
 
-
 def getExtendedData(X, Y, rescaleDimension = 40, interval_deg=30):
 	with concurrent.futures.ProcessPoolExecutor() as executor:
 		newX = []
@@ -210,9 +201,15 @@ if __name__ == '__main__':
 	training_imgs = load(PREPROCESSED_TRAINING)
 	labels = pd.read_csv(TRAIN_LAB_PATH)
 	X, y = formatData(training_imgs, labels)
-	Xnew, ynew = getExtendedData(X,
-								 y)
+	Xnew, ynew = getExtendedData(X, y)
+    #
+	# from matplotlib import pyplot as plt
+	# plt.imshow(Xnew[0])
+	# plt.show()
+	# reformattedImg = image.reshape((1,image.shape[0] * image.shape[1]))
+	# reformattedImgs.append(reformattedImg)
+	# nparr = np.asarray(reformattedImgs)
+	# print(len(Xnew))
 
-
-	save("extendedTrainData.npy", X)
-	np.savetxt("extendedTrainLabels.csv", y)
+	save("extendedTrainData.npy", Xnew)
+	np.savetxt("extendedTrainLabels.csv", ynew)
