@@ -1,12 +1,16 @@
-import sys
+from math import floor, ceil
 from keras.utils import to_categorical
 import numpy as np
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import concurrent.futures
 
+from scipy.ndimage import zoom, rotate
+
 TRAIN_LAB_PATH = "./data/train_labels.csv"
 PREPROCESSED_TRAINING = "./data/processedData.npy"
 PREPROCESSED_KAGGLE = "./data/processed_kaggle.npy"
+ROTATED_LAB = "./rotatedTrainLabels.csv"
+ROTATED_TRAINING = "./rotatedTrainData.npy"
 
 CATEGORIES = ['apple', 'empty', 'moustache', 'mouth', 'mug', 'nail', 'nose', 'octagon', 'paintbrush', 'panda', 'parrot', 'peanut', 'pear', 'pencil', 'penguin', 'pillow', 'pineapple', 'pool', 'rabbit', 'rhinoceros', 'rifle', 'rollerskates', 'sailboat', 'scorpion', 'screwdriver', 'shovel', 'sink', 'skateboard', 'skull', 'spoon', 'squiggle']
 
@@ -41,23 +45,6 @@ def formatXData(X, xDimension = 40):
 	X = X / 255
 	return X.astype('float32')
 
-def addRotations(X,y):
-	newX = []
-	newY = []
-	for i,XMatrix in enumerate(X):
-		newX.append(XMatrix)
-		newY.append(y[i])
-		newX.append(np.rot90(XMatrix, 1))
-		newY.append(y[i])
-		newX.append(np.rot90(XMatrix, 2))
-		newY.append(y[i])
-		newX.append(np.rot90(XMatrix, 3))
-		newY.append(y[i])
-	return np.asarray(newX),np.asarray(newY)
-
-from scipy.ndimage import rotate, zoom
-
-#Finds the first non-zero coordinate, and the last non-zero coordinate.
 def boundingBox(img):
 	minX = -1
 	minY = -1
@@ -74,9 +61,11 @@ def boundingBox(img):
 				maxX = i
 			if maxY < np.max(nonZeroIndexes):
 				maxY = np.max(nonZeroIndexes)
-	return (minX, minY), (maxX,maxY)
+	return (minX, minY), (maxX, maxY)
 
 # Centers the image
+
+
 def center(img):
 	minCoord, maxCoord = boundingBox(img)
 	xLength = maxCoord[0] - minCoord[0]
@@ -85,13 +74,15 @@ def center(img):
 
 	startX = int((len(img) - xLength) / 2)
 	startY = int((len(img[0]) - yLength) / 2)
-	for i,x in enumerate(range(startX, startX + xLength + 1)):
-		for j,y in enumerate(range(startY, startY + yLength + 1)):
+	for i, x in enumerate(range(startX, startX + xLength + 1)):
+		for j, y in enumerate(range(startY, startY + yLength + 1)):
 			newImg[x][y] = img[minCoord[0]+i][minCoord[1]+j]
 	return newImg
 
 # Crop out all of the white space. If you want square dimensions, then it will pad white space.
-def cropWhite(img, isSquare = False, whiteBoundary = True):
+
+
+def cropWhite(img, isSquare=False, whiteBoundary=True):
 	minCoord, maxCoord = boundingBox(img)
 	xLength = maxCoord[0] - minCoord[0] + 3
 	yLength = maxCoord[1] - minCoord[1] + 3
@@ -110,47 +101,97 @@ def cropWhite(img, isSquare = False, whiteBoundary = True):
 	return newImg
 
 # rescale image to square of height, width = dimension
-def rescale(img, dimension, order = 0):
+
+
+def rescale(img, dimension, order=0):
 	cropped = cropWhite(img)
 	height = len(cropped)
 	width = len(cropped[0])
 	zoomFactor = dimension / max(height, width)
+	# print(zoomFactor)
 	return zoom(img, zoomFactor, order=order)
 
-def getRotations(x, y, rescaleDimension = 40, order = 1, interval_deg=30):
+
+def sharpen(img, cutoff=110, bound='below'):
+	newImg = []
+	for row in img:
+		newRow = []
+		for pixel in row:
+			if pixel < cutoff and (bound == 'below' or bound == 'both'):
+				newRow.append(0)
+			elif pixel < cutoff:
+				newRow.append(pixel)
+			elif pixel > cutoff and (bound == 'above' or bound == 'both'):
+				newRow.append(255)
+			else:
+				newRow.append(pixel)
+
+		newImg.append(newRow)
+	return np.asarray(newImg)
+
+def getRotations(x, y, rescaleDimension = 40, order = 0, interval_deg=30):
 	newX = []
 	newY = []
-	newX.append(x)
+	rescaled_img = (x * 255).astype(int)
+	newX.append(rescaled_img.reshape((rescaleDimension, rescaleDimension)))
 	newY.append(y)
 	deg = interval_deg
 	while deg < 360:
-#         newX.append(np.rot90(XMatrix, 1))
+		# Rotate and fix
 		rotImg = rotate(x, deg)
-		croppedImg = cropWhite(rotImg, True)
+		img255 = (rotImg * 255).astype(int)
+		croppedImg = cropWhite(img255, True)
 		centered_img = center(croppedImg)
 		rescaled_img = rescale(centered_img, rescaleDimension, order)
+		rescaled_img[rescaled_img < 0] = 0
+		rescaled_img[rescaled_img > 255] = 255
 		newX.append(rescaled_img)
 		newY.append(y)
 		deg += interval_deg
 	return newX, newY
 
-def getScalings(x, y, dataDim=40, dims=[10,20,30], order=1):
-	pass
-
-def getExtendedData(X, Y, rescaleDimension = 40, interval_deg=30, parallel=True):
+def getScalings(x, y, rescaleDimension=40, dims=(34,30,24,18), order=0):
 	newX = []
 	newY = []
-	if parallel:
-		with concurrent.futures.ProcessPoolExecutor() as executor:
-			for newx, newy in executor.map(getRotations, X, Y):
-				newX.extend(newx)
-				newY.extend(newy)
-	else:
-		for i in range(0,len(X)):
-			newx, newy = getRotations(X[i], Y[i], rescaleDimension=rescaleDimension, interval_deg=interval_deg)
+	newX.append(x)
+	newY.append(y)
+	pads = {34,30,24,18}
+	for dim in dims:
+		# img255 = (x * 255).astype(int)
+		# sharpenedImg = sharpen(img255, 0)
+		rescaled_img = rescale(x, dim, 1)
+		croppedImg = cropWhite(rescaled_img, True)
+		rescaled_img = rescale(croppedImg, rescaleDimension, order)
+		# centered_img = center(croppedImg)
+
+		# pad_img = np.pad(rescaled_img, pad_width=pads[dim], mode='constant')
+
+		# print(pad_img.shape, dim)
+		# rescaled_img = rescale(pad_img, rescaleDimension, order)
+
+		newX.append(rescaled_img)
+		newY.append(y)
+
+	return newX, newY
+
+
+def getExtendedData(X, Y, rescaleDimension = 40, interval_deg=30):
+	with concurrent.futures.ProcessPoolExecutor() as executor:
+		newX = []
+		newY = []
+		for newx, newy in executor.map(getRotations, X, Y):
 			newX.extend(newx)
 			newY.extend(newy)
-	return newX, newY
+
+		newX = np.array(newX)
+
+		resultX = []
+		resultY = []
+		for newx, newy in executor.map(getScalings, newX, newY):
+			resultX.extend(newx)
+			resultY.extend(newy)
+
+	return resultX, resultY
 
 def formatData(images, labels, xDimension = 40):
 	categories = list(set(labels['Category']))
@@ -168,32 +209,10 @@ def formatData(images, labels, xDimension = 40):
 if __name__ == '__main__':
 	training_imgs = load(PREPROCESSED_TRAINING)
 	labels = pd.read_csv(TRAIN_LAB_PATH)
-	X,y = formatData(training_imgs, labels)
-	X,y = getExtendedData(X[0:4], y[0:4])
-	from matplotlib import pyplot as plt
+	X, y = formatData(training_imgs, labels)
+	Xnew, ynew = getExtendedData(X,
+								 y)
 
-	IDX = 16
 
-	plt.imshow(X[IDX])
-	plt.title(getCategoryOf(np.where(y[IDX] == 1)[0][0]))
-	plt.show()
-
-	bep = rescale(X[IDX], 30)
-	bep = np.pad(bep, (5,5), mode='constant')
-	plt.imshow(bep)
-	plt.title(getCategoryOf(np.where(y[IDX] == 1)[0][0]))
-	plt.show()
-
-	bep = rescale(X[IDX], 20)
-	bep = np.pad(bep, (10,10), mode='constant')
-	plt.imshow(bep)
-	plt.title(getCategoryOf(np.where(y[IDX] == 1)[0][0]))
-	plt.show()
-
-	bep = rescale(X[IDX], 10)
-	bep = np.pad(bep, (15,15), mode='constant')
-	plt.imshow(bep)
-	plt.title(getCategoryOf(np.where(y[IDX] == 1)[0][0]))
-	plt.show()
-	# save("rotatedTrainData.npy", X)
-	# np.savetxt("rotatedTrainLabels.csv", y)
+	save("extendedTrainData.npy", X)
+	np.savetxt("extendedTrainLabels.csv", y)
