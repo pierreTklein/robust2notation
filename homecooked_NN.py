@@ -69,6 +69,7 @@ lossFuncs['d_quadratic'] = d_quadError
 
 
 ##################### Models #####################
+
 class sequential_model:
     # Initialization
     def __init__(self, alpha=0.01, loss='quadratic'):
@@ -83,6 +84,13 @@ class sequential_model:
         self.layerDerivActivFuncs = [] # derivative of activation functions for each layer
         self.layer_Primal_Out = []
         self.layer_Deriv_Out = []
+
+        # Training history storage
+        self.history = {}
+        self.history['loss'] = np.empty(0)
+        self.history['acc'] = np.empty(0)
+        self.history['val_loss'] = np.empty(0)
+        self.history['val_acc'] = np.empty(0)
 
 
     ## Methods to construct the NN ##
@@ -129,6 +137,7 @@ class sequential_model:
         self.layerActivFuncs.append( activationFuncs[activation] )
         self.layerDerivActivFuncs.append( activationFuncs['d_'+activation] )
 
+
     # Summarize #TODO: make the model summary cleaner
     def summarize(self):
         for i in range(len(self.weights)):
@@ -141,7 +150,7 @@ class sequential_model:
         print(np.shape(self.layer_Primal_Out[-1]))
 
     ## Training and predictions ##
-    def train(self, train_X, train_y, epochs=10, validation=None, verbose=True):
+    def train(self, train_X, train_y, epochs=10, validation=None, verbose=True, verboMod=1):
         # Initialize some variables
         N_examples = np.shape(train_X)[0]
         feat_dim = np.shape(train_X)[1]
@@ -156,8 +165,8 @@ class sequential_model:
         ## Iterate through epochs ##
         for epoch_idx in range(0,epochs):
 
-            # Store loss for this epoch
-            #totalTrainingLossThisEpoch = 0.0
+            if verbose and (epoch_idx % verboMod == 0):
+                print("Epoch %d/%d\t| " % (epoch_idx+1, epochs), end='')
 
             # Iterate through each training example
             for ex_i in range(N_examples):
@@ -168,11 +177,6 @@ class sequential_model:
                 # Shape label vector and back propogate
                 cur_yVec = np.reshape(train_y[ex_i], (N_classes, 1))
                 curAvgLoss = self._backProp(cur_yVec)
-                # Aggregate loss
-                #totalTrainingLossThisEpoch += curAvgLoss
-
-            # Compute and store the average loss for this epoch
-            #trainingLoss[epoch_idx] = totalTrainingLossThisEpoch / N_examples
 
             # Compute training loss and accuracy this epoch
             trainingLoss[epoch_idx] = self.getLoss(train_X, train_y)
@@ -185,8 +189,7 @@ class sequential_model:
                 validationAccuracy[epoch_idx] = self.getAccuracy(valid_X, valid_y)
 
             # Output
-            if verbose:
-                print("Epoch %d/%d\t| " % (epoch_idx+1, epochs), end='')
+            if verbose and (epoch_idx % verboMod == 0):
                 print("loss: %f\t| " % trainingLoss[epoch_idx], end='')
                 print("acc: %f\t| " % trainingAccuracy[epoch_idx], end='')
                 if validation != None:
@@ -197,14 +200,14 @@ class sequential_model:
 
 
         # Packge the metrics
-        trainingMetrics = {}
-        trainingMetrics['loss'] = trainingLoss
-        trainingMetrics['acc'] = trainingAccuracy
-        if validation != None:
-            trainingMetrics['val_loss'] = validationLoss
-            trainingMetrics['val_acc'] = validationAccuracy
+        self.history['loss'] = np.concatenate((self.history['loss'], trainingLoss))
+        self.history['acc'] = np.concatenate((self.history['acc'], trainingAccuracy))
 
-        return trainingMetrics
+        if validation != None:
+            self.history['val_loss'] = np.concatenate((self.history['val_loss'], validationLoss))
+            self.history['val_acc'] = np.concatenate((self.history['val_acc'], validationAccuracy))
+
+        return self.history
 
     ## Model prediction and evaluation functions ##
     # Predicts probability
@@ -220,6 +223,7 @@ class sequential_model:
         # Activation of the last layer
         networkOut = self.layerActivFuncs[-1](X)
         return networkOut
+
 
     # The loss
     def getLoss(self, X, true_y):
