@@ -3,12 +3,15 @@ DIRECTIONS:
 -If dependencies are not met, run `./setup.sh`.
 
 PREPROCESSING:
--Run preprocessing.ipynb in Jupyter or preferred interface to preprocess  training data.
+-Run preprocessing.ipynb in Jupyter or preferred interface to preprocess training data.
 
-<IMPLEMENTED NN / BASELINES>:
--insert directions here
+NUMPY NEURAL NET:
+This is a fully connected, feed-forward neural net, implemented from scratch using only Numpy.
+-If not already done run preprocessing.ipynb.
+-Run handmade_NN.ipynb in Jupyter or preferred interface to train the NN.
 
 KAGGLE SUBMISSION CNN:
+-If not already done, run preprocessing.ipynb.
 -Run `py concurrent_rotate.py` to generate rotations/scalings of training data.
 -Run Jupyter notebook and open cnn-final.ipynb.
 -You can run the code from the top down, though look at comments for
@@ -26,13 +29,8 @@ concurrent_rotate.py : Non-representative name. Takes provided training data and
 						rotations of 30 degree intervals including 0.
 						Creates 600,000 images out of 10,000 provided.
 						Creates multiple processes.
-conv_autoencoder.ipynb : INSERT DESCRIPTION HERE
-handmade_NN.ipynb : Code for the hand-written neural network.
-preprocessing.ipynb : Preprocesses raw provided image data into .npy files in /data.
-
-data/
+conv_autoencoder.ipynb : contains a convolutional autoencoder, which was tested as a potential de-noising option.
 data.zip : Contains original training and unlabeled data from the competition. Used by preprocessing.ipynb.
-
-829model/
-replica_pred.csv : Predictions from a replication of our 82.9-scoring CNN. Not used by anything.
-model5-40ep-10k-Replica.h5 : Model file of our highest-scoring CNN. Not used by anything.
+handmade_NN.ipynb : contains the Jupyter Notebok used in the training.
+homecooked_NN.py : contains the Neural net class used by handmade_NN.ipynb.
+preprocessing.ipynb : Preprocesses raw provided image data into .npy files in /data.
