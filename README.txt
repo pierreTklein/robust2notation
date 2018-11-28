@@ -23,7 +23,8 @@ FILES:
 Classical_Models.ipynb : Python notebook for the classical methods used including
 						linear SVM, random forest, and k-nearest neighbors.
 cnn-final.ipynb : Final Python notebook showcasing our best-predicting model on Kaggle.
-cnn-working.ipynb : A non-refactored notebook with our raw work for the submitted model.
+cnn-working.ipynb : A non-refactored notebook with our raw work for older models and the submitted one.
+CNN.ipynb : A non-refactored notebook with our raw work for older models.
 concurrent_rotate.py : Non-representative name. Takes provided training data and generates,
 						for each image, 5 scalings of it including the default, and 12
 						rotations of 30 degree intervals including 0.
